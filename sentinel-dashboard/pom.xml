@@ -142,7 +142,7 @@
 									<goal>push</goal>
 								</goals>
 								<configuration>
-									<imageName>docker.phonepe.com:5000/sentinel-dashboar:${project.version}
+									<imageName>docker.phonepe.com:5000/sentinel-dashboard:${project.version}
 									</imageName>
 								</configuration>
 							</execution>

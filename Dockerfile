@@ -1,4 +1,4 @@
-FROM docker.phonepe.com:5000/pp-ops-xenial-ojdk8:0.8.3
+FROM openjdk:8-jdk-alpine
 
 ARG SENTINEL_VERSION="1.3.0"
 
@@ -10,11 +10,10 @@ RUN adduser -S sentinel && \
     echo "Asia/Kolkata" >  /etc/timezone && \
     rm -rf /var/cache/apk/* && \
     sed -i "s/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g" /etc/apk/repositories && \
-    wget -qO sentinel-dashboard.jar "https://github.com/alibaba/Sentinel/releases/download/${SENTINEL_VERSION}/sentinel-dashboard-${SENTINEL_VERSION}.jar"
+    wget -qO sentinel-dashboard.jar "https://github.com/alibaba/Sentinel/releases/download/1.3.0/sentinel-dashboard-1.3.0.jar"
 
 USER sentinel
 
 EXPOSE 7070
-EXPOSE 7071
 
 CMD java -Dproject.name=sentinel -Djava.security.egd=file:/dev/./urandom -jar "/home/sentinel/sentinel-dashboard.jar"
