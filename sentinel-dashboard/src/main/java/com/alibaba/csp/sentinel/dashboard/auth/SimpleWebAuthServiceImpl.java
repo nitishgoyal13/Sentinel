@@ -15,32 +15,34 @@
  */
 package com.alibaba.csp.sentinel.dashboard.auth;
 
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Component;
-
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
 
 /**
  * @author cdfive
  * @since 1.6.0
  */
-@Component
 @Primary
-@ConditionalOnProperty(name = "auth.enabled", matchIfMissing = true)
+@Component
 public class SimpleWebAuthServiceImpl implements AuthService<HttpServletRequest> {
 
-    public static final String WEB_SESSION_KEY = "session_sentinel_admin";
+    public static final String WEB_SESSION_KEY = "session_sentinel_user";
+    public static final String WEB_SESSION_KEY_ADMIN = "session_sentinel_admin";
 
     @Override
     public AuthUser getAuthUser(HttpServletRequest request) {
         HttpSession session = request.getSession();
-        Object sentinelUserObj = session.getAttribute(SimpleWebAuthServiceImpl.WEB_SESSION_KEY);
-        if (sentinelUserObj != null && sentinelUserObj instanceof AuthUser) {
+        Object sentinelUserObj = session.getAttribute(SimpleWebAuthServiceImpl.WEB_SESSION_KEY_ADMIN);
+
+        if (sentinelUserObj != null && sentinelUserObj instanceof AuthService.AuthUser) {
             return (AuthUser) sentinelUserObj;
         }
-
+        sentinelUserObj = session.getAttribute(SimpleWebAuthServiceImpl.WEB_SESSION_KEY);
+        if (sentinelUserObj != null && sentinelUserObj instanceof AuthService.AuthUser) {
+            return (AuthUser) sentinelUserObj;
+        }
         return null;
     }
 

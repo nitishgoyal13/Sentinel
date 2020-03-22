@@ -25,6 +25,8 @@ import com.alibaba.csp.sentinel.dashboard.auth.AuthorizationInterceptor;
 import com.alibaba.csp.sentinel.dashboard.auth.LoginAuthenticationFilter;
 import com.alibaba.csp.sentinel.util.StringUtil;
 
+import com.alibaba.csp.sentinel.dashboard.filter.AuthFilter;
+import javax.servlet.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,15 +50,7 @@ public class WebConfig implements WebMvcConfigurer {
     private final Logger logger = LoggerFactory.getLogger(WebConfig.class);
 
     @Autowired
-    private LoginAuthenticationFilter loginAuthenticationFilter;
-
-    @Autowired
-    private AuthorizationInterceptor authorizationInterceptor;
-
-    @Override
-    public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(authorizationInterceptor).addPathPatterns("/**");
-    }
+    private AuthFilter authFilter;
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -79,35 +73,16 @@ public class WebConfig implements WebMvcConfigurer {
         registration.addUrlPatterns("/*");
         registration.setName("sentinelFilter");
         registration.setOrder(1);
-        // If this is enabled, the entrance of all Web URL resources will be unified as a single context name.
-        // In most scenarios that's enough, and it could reduce the memory footprint.
-        registration.addInitParameter(CommonFilter.WEB_CONTEXT_UNIFY, "true");
 
         logger.info("Sentinel servlet CommonFilter registered");
 
         return registration;
     }
 
-    @PostConstruct
-    public void doInit() {
-        Set<String> suffixSet = new HashSet<>(Arrays.asList(".js", ".css", ".html", ".ico", ".txt",
-            ".woff", ".woff2"));
-        // Example: register a UrlCleaner to exclude URLs of common static resources.
-        WebCallbackManager.setUrlCleaner(url -> {
-            if (StringUtil.isEmpty(url)) {
-                return url;
-            }
-            if (suffixSet.stream().anyMatch(url::endsWith)) {
-                return null;
-            }
-            return url;
-        });
-    }
-
     @Bean
     public FilterRegistrationBean authenticationFilterRegistration() {
         FilterRegistrationBean<Filter> registration = new FilterRegistrationBean<>();
-        registration.setFilter(loginAuthenticationFilter);
+        registration.setFilter(authFilter);
         registration.addUrlPatterns("/*");
         registration.setName("authenticationFilter");
         registration.setOrder(0);

@@ -66,7 +66,7 @@ public class AppController {
         Collections.sort(list, Comparator.comparing(MachineInfo::getApp).thenComparing(MachineInfo::getIp).thenComparingInt(MachineInfo::getPort));
         return Result.ofSuccess(MachineInfoVo.fromMachineInfoList(list));
     }
-    
+
     @RequestMapping(value = "/{app}/machine/remove.json")
     public Result<String> removeMachineById(
             @PathVariable("app") String app,

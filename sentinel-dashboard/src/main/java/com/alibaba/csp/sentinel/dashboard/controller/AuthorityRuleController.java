@@ -15,23 +15,23 @@
  */
 package com.alibaba.csp.sentinel.dashboard.controller;
 
-import java.util.Date;
-import java.util.List;
-
-import com.alibaba.csp.sentinel.dashboard.auth.AuthAction;
-import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
-import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
+import com.alibaba.csp.sentinel.dashboard.auth.AuthService;
+import com.alibaba.csp.sentinel.dashboard.auth.AuthService.AuthUser;
 import com.alibaba.csp.sentinel.dashboard.auth.AuthService.PrivilegeType;
-import com.alibaba.csp.sentinel.slots.block.RuleConstant;
-import com.alibaba.csp.sentinel.util.StringUtil;
-
+import com.alibaba.csp.sentinel.dashboard.client.SentinelApiClient;
 import com.alibaba.csp.sentinel.dashboard.datasource.entity.rule.AuthorityRuleEntity;
+import com.alibaba.csp.sentinel.dashboard.discovery.MachineInfo;
 import com.alibaba.csp.sentinel.dashboard.domain.Result;
 import com.alibaba.csp.sentinel.dashboard.repository.rule.RuleRepository;
-
+import com.alibaba.csp.sentinel.slots.block.RuleConstant;
+import com.alibaba.csp.sentinel.util.StringUtil;
+import java.util.Date;
+import java.util.List;
+import javax.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -57,11 +57,17 @@ public class AuthorityRuleController {
     @Autowired
     private RuleRepository<AuthorityRuleEntity, Long> repository;
 
+    @Autowired
+    private AuthService<HttpServletRequest> authService;
+
+    @Value("${auth.admin.username}")
+    private String adminUsername;
+
     @GetMapping("/rules")
-    @AuthAction(PrivilegeType.READ_RULE)
-    public Result<List<AuthorityRuleEntity>> apiQueryAllRulesForMachine(@RequestParam String app,
-                                                                        @RequestParam String ip,
-                                                                        @RequestParam Integer port) {
+    public Result<List<AuthorityRuleEntity>> apiQueryAllRulesForMachine(HttpServletRequest request,
+            @RequestParam String app, @RequestParam String ip, @RequestParam Integer port) {
+        AuthUser authUser = authService.getAuthUser(request);
+        authUser.authTarget(app, PrivilegeType.READ_RULE);
         if (StringUtil.isEmpty(app)) {
             return Result.ofFail(-1, "app cannot be null or empty");
         }
@@ -104,15 +110,20 @@ public class AuthorityRuleController {
             return Result.ofFail(-1, "limitApp should be valid");
         }
         if (entity.getStrategy() != RuleConstant.AUTHORITY_WHITE
-            && entity.getStrategy() != RuleConstant.AUTHORITY_BLACK) {
+                && entity.getStrategy() != RuleConstant.AUTHORITY_BLACK) {
             return Result.ofFail(-1, "Unknown strategy (must be blacklist or whitelist)");
         }
         return null;
     }
 
     @PostMapping("/rule")
-    @AuthAction(PrivilegeType.WRITE_RULE)
-    public Result<AuthorityRuleEntity> apiAddAuthorityRule(@RequestBody AuthorityRuleEntity entity) {
+    public Result<AuthorityRuleEntity> apiAddAuthorityRule(HttpServletRequest request,
+            @RequestBody AuthorityRuleEntity entity) {
+        AuthUser authUser = authService.getAuthUser(request);
+        if (!adminUsername.equals(authUser.getLoginName())) {
+            return Result.ofFail(-2, "您不是管理员，没有该权限！");
+        }
+        authUser.authTarget(entity.getApp(), PrivilegeType.WRITE_RULE);
         Result<AuthorityRuleEntity> checkResult = checkEntityInternal(entity);
         if (checkResult != null) {
             return checkResult;
@@ -134,9 +145,13 @@ public class AuthorityRuleController {
     }
 
     @PutMapping("/rule/{id}")
-    @AuthAction(PrivilegeType.WRITE_RULE)
-    public Result<AuthorityRuleEntity> apiUpdateParamFlowRule(@PathVariable("id") Long id,
-                                                              @RequestBody AuthorityRuleEntity entity) {
+    public Result<AuthorityRuleEntity> apiUpdateParamFlowRule(HttpServletRequest request, @PathVariable("id") Long id,
+            @RequestBody AuthorityRuleEntity entity) {
+        AuthUser authUser = authService.getAuthUser(request);
+        if (!adminUsername.equals(authUser.getLoginName())) {
+            return Result.ofFail(-2, "您不是管理员，没有该权限！");
+        }
+        authUser.authTarget(entity.getApp(), PrivilegeType.WRITE_RULE);
         if (id == null || id <= 0) {
             return Result.ofFail(-1, "Invalid id");
         }
@@ -164,8 +179,11 @@ public class AuthorityRuleController {
     }
 
     @DeleteMapping("/rule/{id}")
-    @AuthAction(PrivilegeType.DELETE_RULE)
-    public Result<Long> apiDeleteRule(@PathVariable("id") Long id) {
+    public Result<Long> apiDeleteRule(HttpServletRequest request, @PathVariable("id") Long id) {
+        AuthUser authUser = authService.getAuthUser(request);
+        if (!adminUsername.equals(authUser.getLoginName())) {
+            return Result.ofFail(-2, "您不是管理员，没有该权限！");
+        }
         if (id == null) {
             return Result.ofFail(-1, "id cannot be null");
         }
@@ -173,6 +191,7 @@ public class AuthorityRuleController {
         if (oldEntity == null) {
             return Result.ofSuccess(null);
         }
+        authUser.authTarget(oldEntity.getApp(), PrivilegeType.DELETE_RULE);
         try {
             repository.delete(id);
         } catch (Exception e) {

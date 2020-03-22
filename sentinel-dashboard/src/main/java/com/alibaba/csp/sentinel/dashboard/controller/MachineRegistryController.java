@@ -60,7 +60,6 @@ public class MachineRegistryController {
         try {
             MachineInfo machineInfo = new MachineInfo();
             machineInfo.setApp(app);
-            machineInfo.setAppType(appType);
             machineInfo.setHostname(hostname);
             machineInfo.setIp(ip);
             machineInfo.setPort(port);
